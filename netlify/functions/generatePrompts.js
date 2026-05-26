@@ -1,13 +1,24 @@
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' };
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { apiKey, systemPrompt, messages } = JSON.parse(event.body);
+    let body;
+    try {
+      body = JSON.parse(event.body);
+    } catch (e) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON in request body' }) };
+    }
+
+    const { apiKey, systemPrompt, messages } = body;
 
     if (!apiKey) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'API key missing' }) };
+      return { statusCode: 400, body: JSON.stringify({ error: 'API key is missing' }) };
+    }
+
+    if (!systemPrompt || !messages) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'systemPrompt or messages missing' }) };
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -33,6 +44,7 @@ exports.handler = async (event) => {
 
     return { statusCode: 200, body: JSON.stringify(data) };
   } catch (err) {
+    console.error('Function error:', err);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
